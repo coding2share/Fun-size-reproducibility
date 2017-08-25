@@ -1,5 +1,5 @@
 ---
-title: APHA tweet reproduction
+title: AJPH tweet reproduction
 author: Coding2Share
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
@@ -55,7 +55,7 @@ caption, .caption{
 </style>
 
 ##Overview
-This is a brief reproduction of data analysis featured in a [tweet from APHA](https://twitter.com/AMJPublicHealth/status/900073839593349120) on August 22, 2017. In the tweet, APHA used data from [NHANES 2013-2014](https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?BeginYear=2013) to estimate the distribution of the hours spent sedentary by American adults (age 20 and over). 
+This is a brief reproduction of data analysis featured in a [tweet from AJPH](https://twitter.com/AMJPublicHealth/status/900073839593349120) on August 22, 2017. The tweeted graph is from http://ajph.aphapublications.org/doi/10.2105/AJPH.2017.303981; the authors used data from [NHANES 2013-2014](https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?BeginYear=2013) to estimate the distribution of the hours spent sedentary by American adults (age 20 and over). 
 
 We reproduced the graph from the tweet using [R 3.4.1](https://www.r-project.org/) and the following packages: [*Hmisc*](https://cran.r-project.org/web/packages/Hmisc/Hmisc.pdf) (for reading in the SAS export data), [*survey*](https://cran.r-project.org/web/packages/survey/survey.pdf) (for calculating the weighted proportions and standard errors), & [*tidyverse*](https://www.tidyverse.org/) (for everything else).
 
