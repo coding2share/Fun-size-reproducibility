@@ -1,16 +1,15 @@
 ---
-title: AJPH tweet reproduction
-author: Coding2Share
-date: "`r format(Sys.time(), '%d %B, %Y')`"
+title: Fun size reproducibility presents... 
 output: html_document
 ---
 [//]: # CSS style arguments
 
 <style type="text/css">
-
 body{ /* Normal  */
-      font-size: 20px;
+      font-size: 14px;
       counter-reset:table figure;
+      padding: 2px 2px 2px 20px;
+
   }
 
 .table{
@@ -30,24 +29,58 @@ caption::before{
 
 caption, .caption{
   font-style:italic;
-  font-size: 16px;
+  font-size: 14px;
   margin-top:0.5em;
   margin-bottom:0.5em;
-  width:90%;
+  width:80%;
   text-align: left;
 }
 
-#TOC {
-  font-size: 17px;
-  width: 100%;
+h1 {
+color: #000279;
+font-style: bold;
+font-size: 24px;
+}
+
+h3 {
+color: #178000;
+font-size: 18px;
+font-style: bold;
+}
+
+h2 {
+color: #178000;
+font-size: 18px;
+font-style: bold;
+}
+
+.btn {
+display: none;
+}
+
+
+.header {
+    width: 100%;
+    height: 100px;
 }
 
 </style>
 
-##Overview
-This is a brief reproduction of data analysis featured in a [tweet from AJPH](https://twitter.com/AMJPublicHealth/status/900073839593349120) on August 22, 2017. The tweeted graph is from http://ajph.aphapublications.org/doi/10.2105/AJPH.2017.303981; the authors used data from [NHANES 2013-2014](https://wwwn.cdc.gov/nchs/nhanes/continuousnhanes/default.aspx?BeginYear=2013) to estimate the distribution of the hours spent sedentary by American adults (age 20 and over). 
+<script>
+   $(document).ready(function() {
+     $head = $('#header');
+     $head.prepend('<img src=\"https://github.com/coding2share/Fun-size-reproducibility/blob/master/c2s_logo.png?raw=true\" style=\"float: right;width: 100px;\"/>')
+   });
+</script>
 
-We reproduced the graph from the tweet using [R 3.4.1](https://www.r-project.org/) and the following packages: [*Hmisc*](https://cran.r-project.org/web/packages/Hmisc/Hmisc.pdf) (for reading in the SAS export data), [*survey*](https://cran.r-project.org/web/packages/survey/survey.pdf) (for calculating the weighted proportions and standard errors), & [*tidyverse*](https://www.tidyverse.org/) (for everything else).
+##A bar graph with confidence intervals
+
+We set out to reproduce this figure from the September 2017 issue of AJPH (http://ajph.aphapublications.org/doi/10.2105/AJPH.2017.30398): 
+
+*Figure 1. Percentage of US Adults Aged 20 Years or Older Reporting Sitting or Reclining, by Hours Each Day, in 2013 to 2014: National Health and Nutrition Examination Survey.* 
+
+![](http://ajph.aphapublications.org/na101/home/literatum/publisher/apha/journals/content/ajph/2017/ajph.2017.107.issue-9/ajph.2017.303981/20170805/images/large/ajph.2017.303981f1.jpeg){ width=40% }
+
 
 ```{r, echo=F}
 knitr::opts_chunk$set(fig.width=12, fig.height=8, warning=FALSE, message=FALSE)
@@ -72,19 +105,24 @@ knitr::opts_chunk$set(fig.width=12, fig.height=8, warning=FALSE, message=FALSE)
 
 ###Libraries & data management
 
-Here we load the libraries, read in the public use data from the Nhanes website, wrangle it into a useful dataset and specify the survey design.
+We loaded the libraries, read in the public use data from the NHANES website, wrangled it into a useful dataset, and specified the survey weights to use:
 ```{r libs&data, results='hide'}
+#be sure to install the tidyverse, Hmisc, and survey packages
+#tidyverse for data management, Hmisc for importing SAS data, survey for weighting
 library(tidyverse)
 library(Hmisc)
 library(survey)
-theme_set(theme_minimal()) # set ggtheme
+
+#bring in the data from NHANES
 paq_h <- as_tibble(sasxport.get("https://wwwn.cdc.gov/Nchs/Nhanes/2013-2014/PAQ_H.XPT")) #physical activity questions
 demo_h <- as_tibble(sasxport.get("https://wwwn.cdc.gov/Nchs/Nhanes/2013-2014/DEMO_H.XPT")) #weights
 
-sithours <- c('0 to <3','3 to <6','6 to <9','9 to <12','12 to <15','15+') #create labels
+#create labels for hours of sitting variable
+sithours <- c('0 to <3','3 to <6','6 to <9','9 to <12','12 to <15','15+')
 
+#create hours of sitting variable from the minutes of sitting pad680 variable
 nhanes <- paq_h %>%
-  left_join(demo_h) %>% #merge
+  left_join(demo_h) %>% #merge data sets
   mutate(pad680 = ifelse(pad680>1200,NA, pad680)) %>% #recode NAs
   mutate(hours = pad680/60) %>% # recode mins to hrs
   mutate(sit = ifelse(hours<3,sithours[1],
@@ -96,12 +134,11 @@ nhanes <- paq_h %>%
   mutate(sit = factor(sit, levels=sithours)) %>% #factor for correct order
   filter(ridageyr>=20) #filter on 20+ years old
 
-#summary(nhanes$ridageyr)
-
-
+#make a smaller data set with the variables needed
 nh <- nhanes %>%
   select(seqn, sit, wtint2yr) #keep necessary vars
 
+#apply the weights to smaller data set
 nh <- svydesign(~seqn, data = nh, weights = ~wtint2yr) #set svy design
 
 
@@ -109,13 +146,15 @@ nh <- svydesign(~seqn, data = nh, weights = ~wtint2yr) #set svy design
 
 ###Analysis
 
-Here we calculate the percentages and confidence intervals for the grouped hours in the original graph.
+We calculated the percentages and confidence intervals for the grouped hours in the original graph:
 ```{r analysis}
 
 
-
+#use tibble to create data frame
+#with categorical variable, lower bound (lb), upper bound (ub) of conf interval
 sit2 <- tibble(cat = levels(nh$variables$sit), pc=NA, lb=NA, ub=NA)
 
+#use survey package to get proportions and CI for each category
 sit2[1,2:4] <- c(as.numeric(svyciprop(~I(sit == "0 to <3" ),nh)), attr(svyciprop(~I(sit == "0 to <3"),nh),'ci'))
 sit2[2,2:4] <- c(as.numeric(svyciprop(~I(sit == "3 to <6" ),nh)), attr(svyciprop(~I(sit == "3 to <6"),nh),'ci'))
 sit2[3,2:4] <- c(as.numeric(svyciprop(~I(sit == "6 to <9" ),nh)), attr(svyciprop(~I(sit == "6 to <9"),nh),'ci'))
@@ -130,23 +169,22 @@ sit2 <- sit2 %>%
 
 ###Plot
 
-And the plot.
-```{r, fig.cap="Percentage of US Adults Aged 20 Years or Older Reporting Sitting or Reclining, by Hours Each Day, in 2013 to 2014: National Health and Nutrition Examination Survey"}
+And plotted the graph:
+```{r, fig.cap="Percentage of US Adults Aged 20 Years or Older Reporting Sitting or Reclining, by Hours Each Day, in 2013 to 2014: National Health and Nutrition Examination Survey", fig.width=5, fig.height=2.5}
+
+theme_set(theme_minimal()) # set ggtheme
 
 g <- sit2 %>%
   ggplot(aes(x=cat, y=pc, ymin=lb, ymax=ub))
 
 g <- g + geom_col() +
-  geom_errorbar(aes(width=0.25), size=1.5) + 
-  geom_text(aes(label=round(pc,1)), size=10, nudge_y = 5,
+  geom_errorbar(aes(width=0.25), size=.75) + 
+  geom_text(aes(label=round(pc,1)), size=4, nudge_y = 5,
             show.legend = F)
 
 g <- g + labs(y="Percentage", x="Hours per Day Sitting") +
-  theme(text = element_text(size=24))
+  theme(text = element_text(size=14))
 
 g
 
 ```
-
-
-
