@@ -118,7 +118,7 @@ paq_h <- as_tibble(sasxport.get("https://wwwn.cdc.gov/Nchs/Nhanes/2013-2014/PAQ_
 demo_h <- as_tibble(sasxport.get("https://wwwn.cdc.gov/Nchs/Nhanes/2013-2014/DEMO_H.XPT")) #weights
 
 #create labels for hours of sitting variable
-sithours <- c('0 to <3','3 to <6','6 to <9','9 to <12','12 to <15','15+')
+sithours <- c('0 to <3','3 to <6','6 to <9','9 to <12','12 to <15','\u2265 15')
 
 #create hours of sitting variable from the minutes of sitting pad680 variable
 nhanes <- paq_h %>%
@@ -160,7 +160,7 @@ sit2[2,2:4] <- c(as.numeric(svyciprop(~I(sit == "3 to <6" ),nh)), attr(svyciprop
 sit2[3,2:4] <- c(as.numeric(svyciprop(~I(sit == "6 to <9" ),nh)), attr(svyciprop(~I(sit == "6 to <9"),nh),'ci'))
 sit2[4,2:4] <- c(as.numeric(svyciprop(~I(sit == "9 to <12" ),nh)), attr(svyciprop(~I(sit == "9 to <12"),nh),'ci'))
 sit2[5,2:4] <- c(as.numeric(svyciprop(~I(sit == "12 to <15" ),nh)), attr(svyciprop(~I(sit == "12 to <15"),nh),'ci'))
-sit2[6,2:4] <- c(as.numeric(svyciprop(~I(sit == "15+" ),nh)), attr(svyciprop(~I(sit == "15+"),nh),'ci'))
+sit2[6,2:4] <- c(as.numeric(svyciprop(~I(sit == "\u2265 15" ),nh)), attr(svyciprop(~I(sit == "\u2265 15"),nh),'ci'))
 prop2pc <- function(x) {x*100}
 sit2 <- sit2 %>%
   mutate_at(vars(pc:ub), prop2pc) %>%
@@ -170,20 +170,45 @@ sit2 <- sit2 %>%
 ###Plot
 
 And plotted the graph:
-```{r, fig.cap="Percentage of US Adults Aged 20 Years or Older Reporting Sitting or Reclining, by Hours Each Day, in 2013 to 2014: National Health and Nutrition Examination Survey", fig.width=5, fig.height=2.5}
 
-theme_set(theme_minimal()) # set ggtheme
+
+```{r, fig.width=5, fig.height=2.5, eval=FALSE}
 
 g <- sit2 %>%
-  ggplot(aes(x=cat, y=pc, ymin=lb, ymax=ub))
+  ggplot(aes(x=cat, y=pc, ymin=lb, ymax=ub, width=.4))
 
 g <- g + geom_col() +
-  geom_errorbar(aes(width=0.25), size=.75) + 
-  geom_text(aes(label=round(pc,1)), size=4, nudge_y = 5,
-            show.legend = F)
+  geom_errorbar(aes(width=0.1), size=.5) + 
+  geom_text(aes(label=sprintf("%0.1f",round(pc,1))), size=3, nudge_y = 5,
+            show.legend = F) +
+  ylim(0, 50)
 
 g <- g + labs(y="Percentage", x="Hours per Day Sitting") +
-  theme(text = element_text(size=14))
+  theme(text = element_text(size=12))
+
+g <- g + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"))
+
+g
+```
+*Figure 1. Percentage of US Adults Aged 20 Years or Older Reporting Sitting or Reclining, by Hours Each Day, in 2013 to 2014: National Health and Nutrition Examination Survey.* 
+
+```{r, fig.width=5, fig.height=2.5, echo=FALSE}
+
+g <- sit2 %>%
+  ggplot(aes(x=cat, y=pc, ymin=lb, ymax=ub, width=.4))
+
+g <- g + geom_col() +
+  geom_errorbar(aes(width=0.1), size=.5) + 
+  geom_text(aes(label=sprintf("%0.1f",round(pc,1))), size=3, nudge_y = 5,
+            show.legend = F) +
+  ylim(0, 50)
+
+g <- g + labs(y="Percentage", x="Hours per Day Sitting") +
+  theme(text = element_text(size=12))
+
+g <- g + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+panel.background = element_blank(), axis.line = element_line(colour = "black"))
 
 g
 
