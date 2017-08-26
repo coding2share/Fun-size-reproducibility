@@ -1,8 +1,5 @@
----
-title: Fun size reproducibility presents... 
-output: github_document
----
-[//]: # CSS style arguments
+Fun size reproducibility presents...
+================
 
 <style type="text/css">
 body{ /* Normal  */
@@ -65,48 +62,26 @@ display: none;
 }
 
 </style>
-
 <script>
    $(document).ready(function() {
      $head = $('#header');
      $head.prepend('<img src=\"https://github.com/coding2share/Fun-size-reproducibility/blob/master/c2s_logo.png?raw=true\" style=\"float: right;width: 100px;\"/>')
    });
 </script>
+A bar graph with confidence intervals
+-------------------------------------
 
-##A bar graph with confidence intervals
+We set out to reproduce this figure from the September 2017 issue of AJPH (<http://ajph.aphapublications.org/doi/10.2105/AJPH.2017.30398>):
 
-We set out to reproduce this figure from the September 2017 issue of AJPH (http://ajph.aphapublications.org/doi/10.2105/AJPH.2017.30398): 
+*Figure 1. Percentage of US Adults Aged 20 Years or Older Reporting Sitting or Reclining, by Hours Each Day, in 2013 to 2014: National Health and Nutrition Examination Survey.*
 
-*Figure 1. Percentage of US Adults Aged 20 Years or Older Reporting Sitting or Reclining, by Hours Each Day, in 2013 to 2014: National Health and Nutrition Examination Survey.* 
+<img src="http://ajph.aphapublications.org/na101/home/literatum/publisher/apha/journals/content/ajph/2017/ajph.2017.107.issue-9/ajph.2017.303981/20170805/images/large/ajph.2017.303981f1.jpeg" style="width:40.0%" />
 
-![](http://ajph.aphapublications.org/na101/home/literatum/publisher/apha/journals/content/ajph/2017/ajph.2017.107.issue-9/ajph.2017.303981/20170805/images/large/ajph.2017.303981f1.jpeg){ width=40% }
-
-
-```{r, echo=F}
-knitr::opts_chunk$set(fig.width=12, fig.height=8, warning=FALSE, message=FALSE)
-
-```
-
-```{r, results='hide', echo=F}
-'# PROLOG   ################################################################'   
-
-'# PROJECT: OPEN SCIENCE #'   
-'# PURPOSE: REPRODUCE APHA TWEET AUG 22 2017 #'   
-'# DIR:     G:/CPHSS/OpenScience/Repros #'   
-'# DATA:    https://wwwn.cdc.gov/Nchs/Nhanes/2013-2014/PAQ_H.XPT #'   
-'#          https://wwwn.cdc.gov/Nchs/Nhanes/2013-2014/DEMO_H.XPT #'   
-'# AUTHOR:  Todd Combs #'   
-'# CREATED: AUG 23, 2017 #'   
-'# LATEST:  AUG 23, 2017 #'   
-'# NOTES:    #'   
-
-'# PROLOG   ###############################################################'   
-```
-
-###Libraries & data management
+### Libraries & data management
 
 We loaded the libraries, read in the public use data from the NHANES website, wrangled it into a useful dataset, and specified the survey weights to use:
-```{r libs&data, results='hide'}
+
+``` r
 #be sure to install the tidyverse, Hmisc, and survey packages
 #tidyverse for data management, Hmisc for importing SAS data, survey for weighting
 library(tidyverse)
@@ -140,16 +115,13 @@ nh <- nhanes %>%
 
 #apply the weights to smaller data set
 nh <- svydesign(~seqn, data = nh, weights = ~wtint2yr) #set svy design
-
-
 ```
 
-###Analysis
+### Analysis
 
 We calculated the percentages and confidence intervals for the grouped hours in the original graph:
-```{r analysis}
 
-
+``` r
 #use tibble to create data frame
 #with categorical variable, lower bound (lb), upper bound (ub) of conf interval
 sit2 <- tibble(cat = levels(nh$variables$sit), pc=NA, lb=NA, ub=NA)
@@ -167,13 +139,11 @@ sit2 <- sit2 %>%
   mutate(cat=factor(cat, levels=cat))
 ```
 
-###Plot
+### Plot
 
 And plotted the graph:
 
-
-```{r, fig.width=5, fig.height=2.5, eval=FALSE}
-
+``` r
 g <- sit2 %>%
   ggplot(aes(x=cat, y=pc, ymin=lb, ymax=ub, width=.4))
 
@@ -191,25 +161,7 @@ panel.background = element_blank(), axis.line = element_line(colour = "black"))
 
 g
 ```
-*Figure 1. Percentage of US Adults Aged 20 Years or Older Reporting Sitting or Reclining, by Hours Each Day, in 2013 to 2014: National Health and Nutrition Examination Survey.* 
 
-```{r, fig.width=5, fig.height=2.5, echo=FALSE}
+*Figure 1. Percentage of US Adults Aged 20 Years or Older Reporting Sitting or Reclining, by Hours Each Day, in 2013 to 2014: National Health and Nutrition Examination Survey.*
 
-g <- sit2 %>%
-  ggplot(aes(x=cat, y=pc, ymin=lb, ymax=ub, width=.4))
-
-g <- g + geom_col() +
-  geom_errorbar(aes(width=0.1), size=.5) + 
-  geom_text(aes(label=sprintf("%0.1f",round(pc,1))), size=3, nudge_y = 5,
-            show.legend = F) +
-  ylim(0, 50)
-
-g <- g + labs(y="Percentage", x="Hours per Day Sitting") +
-  theme(text = element_text(size=12))
-
-g <- g + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-panel.background = element_blank(), axis.line = element_line(colour = "black"))
-
-g
-
-```
+![](APHA_sitting_8_23_17_simple_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-4-1.png)
