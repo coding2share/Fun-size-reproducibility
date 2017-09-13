@@ -1,0 +1,160 @@
+---
+title: Fun size reproducibility presents... 
+output: html_document
+---
+[//]: # CSS style arguments
+
+<style type="text/css">
+body{ /* Normal  */
+      font-size: 14px;
+      counter-reset:table figure;
+      padding: 2px 2px 2px 20px;
+
+  }
+
+.table{
+  width:auto;
+  font-size:12px;
+}
+
+caption::before{
+  counter-increment: table;
+  content: "Table " counter(table) ": ";
+}
+
+.caption::before{
+  counter-increment: figure;
+  content: "Figure " counter(figure) ": ";
+}
+
+caption, .caption{
+  font-style:italic;
+  font-size: 14px;
+  margin-top:0.5em;
+  margin-bottom:0.5em;
+  width:80%;
+  text-align: left;
+}
+
+h1 {
+color: #000279;
+font-style: bold;
+font-size: 24px;
+}
+
+h3 {
+color: #178000;
+font-size: 18px;
+font-style: bold;
+}
+
+h2 {
+color: #178000;
+font-size: 18px;
+font-style: bold;
+}
+
+.btn {
+display: none;
+}
+
+
+.header {
+    width: 100%;
+    height: 100px;
+}
+
+</style>
+
+<script>
+   $(document).ready(function() {
+     $head = $('#header');
+     $head.prepend('<img src=\"https://github.com/coding2share/Fun-size-reproducibility/blob/master/c2s_logo.png?raw=true\" style=\"float: right;width: 100px;\"/>')
+   });
+</script>
+
+##A line graph of firearm manufacturing
+
+This is a brief reproduction of data analysis featured in an [article from AJPM](http://dx.doi.org/10.1016/j.amepre.2017.05.002) published on June 22, 2017. The authors used data from the [Bureau of Alcohol, Tobacco, Firearms, and Explosives](https://www.atf.gov/resource-center/data-statistics) to examine the number of guns manufactured in the United States from 1990-2015. 
+
+We reproduced Figure 1 using [R 3.4.1](https://www.r-project.org/) and the following packages: [*data.table*](https://cran.r-project.org/web/packages/data.table/data.table.pdf) (for reading in the online CSV file) and [*ggplot2*](https://cran.r-project.org/web/packages/ggplot2/ggplot2.pdf) (for creating the graph).
+
+![Domestic firearm production by type of weapon, 1990-2015.](https://raw.githubusercontent.com/coding2share/Fun-size-reproducibility/master/AJPM-Sept2017-firearm-manufacturing/figure1-from-article.jpg){width=80%}
+
+```{r, echo=F}
+knitr::opts_chunk$set(fig.width=8, fig.height=5, warning=FALSE, message=FALSE)
+
+```
+
+```{r, results='hide', echo=F}
+'# PROLOG   ################################################################'   
+
+'# PROJECT: OPEN SCIENCE #'   
+'# PURPOSE: REPRODUCE AJPM Figure June 22 2017 #'   
+'# DIR:     G:/CPHSS/OpenScience/Repros #'   
+'# DATA:    https://raw.githubusercontent.com/jenineharris/statsGame/master/total_firearms_manufactured_US_1990to2015.csv #'   
+'# AUTHOR:  Jenine Harris #'   
+'# CREATED: SEPT 12, 2017 #'   
+'# LATEST:  SEPT 12, 2017 #'   
+'# NOTES:    #'   
+
+'# PROLOG   ###############################################################'   
+```
+
+###Libraries & data management
+
+The data used in the paper were pulled from multiple publicly available sources, some of which were in spreadsheets on the [Bureau of Alcohol, Tobacco, Firearms, and Explosives website](https://www.atf.gov/resource-center/data-statistics) that were locked or disorganized pdf documents that were not easily imported. The data were also included in Table 1 of the paper, which could likely be scraped using R to automate the process, however, the paper is behind a paywall at [AJPM](https://doi.org/10.1016/j.amepre.2017.05.002) and is likely to be inaccessible to most. As a result, instead of bringing in raw data from the original source or the Table, we saved the contents of Table 1 as a comma separated values (CSV) file, [uploaded it to Github](https://raw.githubusercontent.com/coding2share/Fun-size-reproducibility/master/AJPM-Sept2017-firearm-manufacturing/total_firearms_manufactured_US_1990to2015.csv), and used it to reproduce the Figure.
+
+Here we load the libraries, read in the data, and wrangle it into a useful dataset.
+
+```{r libs&data, results='hide'}
+library(data.table)
+library(ggplot2)
+
+#bring in the data copied from Table 1 and saved as csv
+gunsManu <- fread("https://raw.githubusercontent.com/coding2share/Fun-size-reproducibility/master/AJPM-Sept2017-firearm-manufacturing/total_firearms_manufactured_US_1990to2015.csv")
+
+#recode Year to be a character variable
+gunsManu$Year <- as.character(gunsManu$Year)
+
+#make the data long instead of wide
+gunsManuLong <- melt(gunsManu, id.vars = "Year",
+                     measure.vars = c("Pistols","Revolvers","Rifles","Shotguns","Total firearms"))
+
+#rename the variables
+names(gunsManuLong) <- c("Year","gunType","numGunsManu")
+summary(gunsManuLong)
+```
+
+###Analysis
+
+The data were plotted without additional analyses.
+
+###Plot
+
+And the plot.
+```{r, fig.cap="Domestic firearm production by type of weapon, 1990-2015."}
+
+#plot it
+ggplot(gunsManuLong, aes(x=Year, y=numGunsManu, group=gunType, linetype=gunType)) + 
+  geom_line(size=1) +
+  theme_classic() +
+  scale_y_continuous(labels = scales::comma, name="Number of firearms",
+                     breaks=seq(0,11000000, by=1000000), limits=c(0,11000000)) +
+  scale_x_discrete(name="") +
+  scale_linetype_manual(values=c("longdash","twodash",
+                                 "dotted","dashed","solid"),
+                        name="") +
+  theme(legend.position="bottom", axis.text = element_text(size = 7),
+        axis.line = element_line(color = 'gray',size=0.1),
+        axis.ticks = element_line(size=1,color='gray'),
+        axis.ticks.length = unit(-.1, "cm"),
+        axis.text.y = element_text(margin=margin(0,5,0,0,"pt")),
+        axis.text.x = element_text(margin=margin(5,0,0,0,"pt")),
+        legend.box.margin=margin(c(-20,0,0,0)),
+        axis.title=element_text(size=9))
+
+```
+
+
+
