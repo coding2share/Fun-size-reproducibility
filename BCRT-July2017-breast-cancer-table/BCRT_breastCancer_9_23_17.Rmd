@@ -1,0 +1,206 @@
+---
+title: Fun size reproducibility presents... 
+output: html_document
+---
+[//]: # CSS style arguments
+
+<style type="text/css">
+body{ /* Normal  */
+      font-size: 14px;
+      counter-reset:table figure;
+      padding: 2px 2px 2px 20px;
+
+  }
+
+.table{
+  width:auto;
+  font-size:12px;
+}
+
+caption::before{
+  counter-increment: table;
+  content: "Table " counter(table) ": ";
+}
+
+.caption::before{
+  counter-increment: figure;
+  content: "Figure " counter(figure) ": ";
+}
+
+caption, .caption{
+  font-style:italic;
+  font-size: 14px;
+  margin-top:0.5em;
+  margin-bottom:0.5em;
+  width:80%;
+  text-align: left;
+}
+
+h1 {
+color: #000279;
+font-style: bold;
+font-size: 24px;
+}
+
+h3 {
+color: #178000;
+font-size: 18px;
+font-style: bold;
+}
+
+h2 {
+color: #178000;
+font-size: 18px;
+font-style: bold;
+}
+
+.btn {
+display: none;
+}
+
+
+.header {
+    width: 100%;
+    height: 100px;
+}
+
+</style>
+
+<script>
+   $(document).ready(function() {
+     $head = $('#header');
+     $head.prepend('<img src=\"https://github.com/coding2share/Fun-size-reproducibility/blob/master/c2s_logo.png?raw=true\" style=\"float: right;width: 100px;\"/>')
+   });
+</script>
+
+##A table showing characteristics of transgender survey participants
+
+This is a brief reproduction of data analysis featured in an [article from Breast Cancer Research and Treatment](https://www.ncbi.nlm.nih.gov/pubmed/28828563) published on August 21, 2017. The authors used data from the [2014 Behavioral Risk Factor Surveillance Survey](https://www.cdc.gov/brfss/annual_data/annual_2014.html) to examine breast cancer screening in transgender patients. 
+
+We reproduced Table 1 using [R 3.4.1](https://www.r-project.org/) and the following packages: [*haven*](https://cran.r-project.org/web/packages/haven/index.html) (for reading in the online zipped XPT file), [*knitr*](https://cran.r-project.org/web/packages/knitr/index.html), and [*kableExtra*](https://cran.r-project.org/web/packages/kableExtra/index.html) (for formatting the table).
+
+Here is the original table:
+
+![](https://raw.githubusercontent.com/coding2share/Fun-size-reproducibility/master/BCRT-July2017-breast-cancer-table/table1-from-article.JPG){width=40%}
+
+
+```{r, echo=F}
+knitr::opts_chunk$set(fig.width=8, fig.height=5, warning=FALSE, message=FALSE)
+
+```
+
+```{r, results='hide', echo=F}
+'# PROLOG   ################################################################'   
+
+'# PROJECT: OPEN SCIENCE #'   
+'# PURPOSE: REPRODUCE BCRT Table #'   
+'# DIR:     G:/CPHSS/OpenScience/Repros #'   
+'# DATA:    http://www.cdc.gov/brfss/annual_data/2014/files/LLCP2014XPT.zip#'   
+'# AUTHOR:  Jenine Harris#'   
+'# CREATED: SEPT 23, 2017 #'   
+'# LATEST:  SEPT 23, 2017 #'   
+'# NOTES:    #'   
+
+'# PROLOG   ###############################################################'   
+```
+
+###Libraries & data management
+
+The data used in the paper were from a publicly available source on the [2014 Behavioral Risk Factor Surveillance Survey website](https://www.cdc.gov/brfss/annual_data/annual_2014.html). Two file types are available: ASCII and XPT. We used the XPT file. The file was zipped, requiring an additional step for download.
+
+Here we load the haven library, read in the data, unzip it, and wrangle it into a useful data set for building the table.
+
+```{r libs&data, results='hide'}
+#bring in data file
+library(haven) #for read_xpt (auto unzips as well)
+temp <- tempfile(fileext = ".zip") # create tempfile
+download.file("http://www.cdc.gov/brfss/annual_data/2014/files/LLCP2014XPT.zip",temp) #get data
+brfss2014 <-read_xpt(temp) #unzip & read in
+brfss2014 #inspect
+unlink(temp)
+
+#subset the transgender participants, 40-74 years old, with mammogram data
+trans2014 <- subset(brfss2014, TRNSGNDR < 4 & `_AGEG5YR` > 4 & `_AGEG5YR` < 12 & HADMAM != 7 )
+
+#make a smaller data set with just variables in table 1
+table1vars <- c("TRNSGNDR", "_AGEG5YR", "_RACE","_INCOMG",
+                "_EDUCAG","HLTHPLN1","HADMAM")
+trans2014small <- trans2014[table1vars]
+
+#make the variables factors
+#adds an X in front of variable names starting with underscore
+trans2014small <- data.frame(lapply(trans2014small, factor))
+
+#add category labels to each factor
+levels(trans2014small$TRNSGNDR) = c('Male to female','Female to male','Gender non-conforming')
+levels(trans2014small$X_AGEG5YR) = c('40-44','45-49','50-54',
+                                     '55-59','60-64','65-69',
+                                     '70-74')
+#inconsistent with the paper labels
+#Pacific Islanders were coded as other and not with
+#Asian
+levels(trans2014small$X_RACE) = c('White','Black','Native American',
+                                  'Asian/Pacific Islander',
+                                  'Other', 'Other','Other','Other')
+levels(trans2014small$X_INCOMG) = c('Less than $15,000',
+                                    '$15,000 to less than $25,000',
+                                    '$25,000 to less than $35,000',
+                                    '$35,000 to less than $50,000',
+                                    '$50,000 or more','Don\'t know/not sure/missing')
+levels(trans2014small$X_EDUCAG) = c('Did not graduate high school',
+                                    'Graduated high school',
+                                    'Attended College/Technical School',
+                                    'Graduated from College/Technical School')
+levels(trans2014small$HLTHPLN1) = c('Yes','No')
+
+```
+
+###Data analysis
+
+Here we used a function to find percentages for all the variables in the small data set, created a new data frame with the percentages, and removed groups from the data set that were not displayed in the original table.
+
+```{r}
+#make a table of the percentages
+#transgender variable is n=220 but others are
+#inconsistent with the paper use n=222 for
+#reproducing percentages correctly
+#remove 2 cases from transgender variable
+trans2014small$TRNSGNDR[trans2014small$HADMAM == 9] <- NA
+
+#finding percentages and rounding to one decimal place
+tblFun <- function(x){
+    percs <- cbind(round(prop.table(table(x))*100,1))
+}
+
+#make a data frame of results
+fullTable <- do.call(rbind,lapply(trans2014small,tblFun))
+
+#remove Healthcare No category and HADMAM categories
+#label the percentage column
+fullTable <- data.frame(fullTable[c(1:26),])
+colnames(fullTable) <- "Percentage"
+#create a variable from the rownames and label the variable
+fullTable <- cbind("Survey participant demographics"=rownames(fullTable), fullTable)
+```
+
+###Making the table
+
+Note that the options for formatting tables are limited in R (although they are getting better all the time!) so reproducing the table *exactly* as it is shown in the published paper would require developing some more sophistocated code. Using existing formatting options in knitr and kableExtra we were able to get very close to the published format and a pretty good-looking table:
+
+```{r}
+#format the table
+library(knitr)
+library(kableExtra)
+fullTable %>%
+kable("html", caption = "Transgender Survey Participant Demographics (n=222)",
+      style = "ajs", row.names = FALSE) %>%
+  group_rows("Transition status (n=220)", 1, 3) %>%
+  group_rows("Age category", 4, 10) %>%
+  group_rows("Race/ethnicity", 11, 15) %>%
+  group_rows("Income category", 16, 21) %>%
+  group_rows("Education category", 22, 25) %>%
+  group_rows("Health insurance?", 26, 26) 
+
+
+```
+
